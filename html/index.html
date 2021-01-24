@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>RPKI RFCs Graph</title>
+    <link type="text/css" rel="stylesheet" href="./css/style.css"/>
+    <link type="text/css" rel="stylesheet" href="./css/bootstrap.min.css">
+    <link type="text/css" rel="stylesheet" href="./css/titatoggle-dist-min.css">
+    
+    <script type="text/javascript" src="./js/jquery-1.12.3.min.js"></script>
+    <script type="text/javascript" src="./js/d3.v3.min.js"></script>
+    <script type="text/javascript" src="./js/data-format.js"></script>
+    <script type="text/javascript" src="./js/bootstrap.min.js" ></script>
+    <style>
+        .modal-xl{
+            min-width: 800px;
+            width:100%;
+            height:100%;
+            font-weight: normal;
+        }
+
+        @media (min-width:992px){.modal-lg,.modal-xl{max-width:800px}}
+        @media (min-width:1200px){.modal-xl{max-width:1140px}}
+        
+        #content{
+            margin: 0 auto;
+            text-align: center;
+            padding: 5px;
+            width: 850px;
+            border: 1px solid grey;
+            border-radius: 6px;
+            -moz-border-radius: 6px;
+            -webkit-border-radius: 6px;
+            -webkit-box-shadow: 0 5px 10px rgba(0, 0, 0, .2);
+            box-shadow: 0 5px 10px rgba(0, 0, 0, .2);
+            margin-top: 20px;
+        }
+
+        .tooltip-check{
+            width: 130px;
+            margin:  0 auto;
+            text-align: center;
+        }
+
+        img {
+            width: 80%;
+            margin: auto;
+            display: block;
+        }
+
+    </style>
+  </head>
+  <body>
+    
+
+    <!-- Modal -->
+    <div class="modal fade" id="staticModal" data-backdrop="static" data-keyboard="false" tabindex="-1" aria-labelledby="staticModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+            <h5 class="modal-title" id="summary_title">Modal title</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+            </div>
+            <div class="modal-body" id="summary_text">
+
+            </div>
+            <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+        </div>
+    </div>
+    
+    <div id="content">
+        
+    
+        <div id="graph"></div>
+
+        <div class="container-fluid">
+            <div class="row">
+              <div class="col-sm-3">
+                <div class="tooltip-check checkbox-slider--b-flat">
+                    <label>
+                        <input id="enableTooltip" type="checkbox" checked><span>Tooltip</span>
+                    </label>
+                </div>
+              </div>
+              <div class="col-sm-3">
+                <div class="tooltip-check checkbox-slider--b-flat">
+                    <label>
+                        <input id="enableTooltipMust" type="checkbox" checked><span>MUST</span>
+                    </label>
+                </div>
+              </div>
+              <div class="col-sm-3">
+                <div class="tooltip-check checkbox-slider--b-flat">
+                    <label>
+                        <input id="enableTooltipShould" type="checkbox" checked><span>SHOULD</span>
+                    </label>
+                </div>
+              </div>
+              <div class="col-sm-3">
+                <div class="tooltip-check checkbox-slider--b-flat">
+                    <label>
+                        <input id="enableTooltipMay" type="checkbox" checked><span>MAY</span>
+                    </label>
+                </div>
+              </div>
+            </div>
+        </div>
+    </div>
+    
+
+    
+    
+    
+    
+    <script type="text/javascript">
+
+        color = d3.scale.category10(); 
+        
+        var w = 800,
+            h = 800,
+            rx = w / 2,
+            ry = h / 2,
+            m0,
+            rotate = 0
+            pi = Math.PI;
+    
+        var splines = [];
+    
+        var cluster = d3.layout.cluster()
+            .size([360, ry - 180])
+            .sort(function(a, b) {
+                return d3.ascending(a.key, b.key);
+            });
+    
+        var bundle = d3.layout.bundle();
+    
+        var line = d3.svg.line.radial()
+            .interpolate("bundle")
+            .tension(.5)
+            .radius(function(d) {
+                return d.y;
+            })
+            .angle(function(d) {
+                return d.x / 180 * Math.PI;
+            });
+    
+        // Chrome 15 bug: <http://code.google.com/p/chromium/issues/detail?id=98951>
+        var div = d3.select("#graph")
+            .style("z-index", "19")
+            .style("width", w + "px")
+            .style("height", h + "px");
+    
+        var svg = div.append("svg:svg")
+            .attr("width", w)
+            .attr("height", w)
+            .append("svg:g")
+            .attr("transform", "translate(" + rx + "," + ry + ")");
+    
+        svg.append("svg:path")
+            .attr("class", "arc")
+            .attr("d", d3.svg.arc().outerRadius(ry - 180).innerRadius(0).startAngle(0).endAngle(2 * Math.PI))
+            //.on("mousedown", mousedown);
+
+        // Legends
+        node_legend_x = rx/3
+        node_legend_y = -ry + 40
+        link_legend_x = rx/2
+        link_legend_y = node_legend_y + 30
+
+        svg.append("rect")
+            .attr("x", -rx + node_legend_x)
+            .attr("y", node_legend_y)
+            .attr("width", 10)
+            .attr("height", 10)
+            .style("fill", "blue")
+        svg.append("text")
+            .attr("x", -rx + node_legend_x + 15)
+            .attr("y", node_legend_y + 6)
+            .text("RFC (RPKI)")
+            .style("font-size", "12px")
+            .attr("alignment-baseline","middle")
+        
+        node_legend_x += rx/3
+        
+        svg.append("rect")
+            .attr("x", -rx + node_legend_x)
+            .attr("y", node_legend_y)
+            .attr("width", 10)
+            .attr("height", 10)
+            .style("fill", "#ffc107")
+        svg.append("text")
+            .attr("x", -rx + node_legend_x + 15)
+            .attr("y", node_legend_y + 6)
+            .text("RFC with summary (RPKI)")
+            .style("font-size", "12px")
+            .attr("alignment-baseline","middle")
+        
+        node_legend_x += rx/3
+
+        
+        svg.append("rect")
+            .attr("x", -rx + node_legend_x + 100)
+            .attr("y", node_legend_y)
+            .attr("width", 10)
+            .attr("height", 10)
+            .style("fill", "grey")
+        svg.append("text")
+            .attr("x", -rx + node_legend_x + 115)
+            .attr("y", node_legend_y + 6)
+            .text("RFC (other)")
+            .style("font-size", "12px")
+            .attr("alignment-baseline","middle")
+
+        svg.append("line")
+            .attr("x1", -rx + link_legend_x)
+            .attr("x2", -rx + link_legend_x + 30)
+            .attr("y1", link_legend_y)
+            .attr("y2", link_legend_y)
+            .attr("stroke", "red")
+        svg.append("text")
+            .attr("x", -rx + link_legend_x + 40)
+            .attr("y", link_legend_y)
+            .text("OBSOLETE")
+            .style("font-size", "12px")
+            .attr("alignment-baseline","middle")
+        
+        link_legend_x += rx/2
+
+        svg.append("line")
+            .attr("x1", -rx + link_legend_x)
+            .attr("x2", -rx + link_legend_x + 30)
+            .attr("y1", link_legend_y)
+            .attr("y2", link_legend_y)
+            .attr("stroke", "green")
+        svg.append("text")
+            .attr("x", -rx + link_legend_x + 40)
+            .attr("y", link_legend_y)
+            .text("UPDATE")
+            .style("font-size", "12px")
+            .attr("alignment-baseline","middle")
+        
+        
+        
+        d3.json("./data/rfcs_data.json", function(classes) {
+            var nodes = cluster.nodes(packages.root(classes)),
+                links = packages.imports(nodes, classes);
+                splines = bundle(links);
+
+            // edges arrow
+            svg.selectAll("markers")
+                .data(links)
+                .enter().append("svg:marker") 
+                .attr('id', function(d,i){
+                    return 'end-arrow' + i; //<-- append index postion
+                })
+                .attr('viewBox', '0 -5 10 10')
+                .attr("refX", 15)
+                .attr("refY", 0.5)
+                .attr('markerWidth', 5)
+                .attr('markerHeight', 5)
+                .attr('orient', 'auto')
+                .append('svg:path')
+                    .attr('d', 'M0,-5L10,0L0,5')
+                    .style("fill", function(d) { return link_color(d.kind); });
+          
+            // Edges
+            var path = svg.selectAll("path.link")
+                .data(links)
+                .enter().append("svg:path")
+                .attr("class", function(d) { return "link source-" + d.source.key + " target-" + d.target.key; })
+                .attr("d", function(d, i) { return line(splines[i]); })
+                .style('marker-end', function(d,i){
+                    return "url(#end-arrow"+i+")"; //<--use the one with the right id
+                })
+                .style("stroke", function(d, i) {return link_color(d.kind);});
+
+            // RFCs Categories
+            var groupData = svg.selectAll("g.group")
+                .data(nodes.filter(function(d) { 
+                    return (d.key == 'STANDARD' || d.key == 'BCP' || d.key == 'INFORMATIONAL') && d.children;
+                }))
+                .enter().append("group")
+                .attr("class", "group");
+            
+            // RFCs Categries Arc
+            var groupArc = d3.svg.arc()
+                .innerRadius(ry - 177)
+                .outerRadius(ry - 157)
+                .startAngle(function(d) { return (findStartAngle(d.__data__.children)-2) * pi / 180;})
+                .endAngle(function(d) { return (findEndAngle(d.__data__.children)+2) * pi / 180});
+            
+            svg.selectAll("g.arc")
+                .data(groupData[0])
+                .enter().append("svg:path")
+                .attr("d", groupArc)
+                .attr("id", function(d, i) {console.log(d.__data__.key); return d.__data__.key;})
+                .attr("class", "groupArc")
+                .style("fill", function(d, i) {return color(i);})
+                .style("fill-opacity", 0.5)
+                .each(function(d,i) {
+                    var firstArcSection = /(^.+?)L/;
+                    var newArc = firstArcSection.exec( d3.select(this).attr("d") )[1];
+                    newArc = newArc.replace(/,/g , " ");
+                    svg.append("path")
+                        .attr("class", "hiddenArcs")
+                        .attr("id", "hidden"+d.__data__.key)
+                        .attr("d", newArc)
+                        .style("fill", "none");
+                });
+
+            svg.selectAll(".arcText")
+                .data(groupData[0])
+                .enter().append("text")
+                .attr("class", "arcText")
+                .attr("dy", 15)
+                .append("textPath")
+                .attr("startOffset","50%")
+                .style("text-anchor","middle")
+                .attr("xlink:href",function(d,i){return "#hidden" + d.__data__.key;})
+                .text(function(d){return d.__data__.key;}); 
+
+            // Graph nodes: RFCs
+            svg.selectAll("g.node")
+                .data(nodes.filter(function(n) { return !n.children; }))
+                .enter().append("svg:g")
+                .attr("class", "node")
+                .style("fill", function(d, i) {return d.color;})
+                .attr("id", function(d) { return "node-" + d.key; })
+                .attr("transform", function(d) { return "rotate(" + (d.x - 90) + ")translate(" + d.y + ")"; })
+                .append("svg:text")
+                .attr("dx", function(d) { return d.x < 180 ? 25 : -25; })
+                .attr("dy", ".31em")
+                .attr("text-anchor", function(d) { return d.x < 180 ? "start" : "end"; })
+                .attr("transform", function(d) { return d.x < 180 ? null : "rotate(180)"; })
+                .text(function(d) { return d.key.replace(/_/g, ' '); })
+                .on("mouseover", mouseover)
+                .on("mouseout", mouseout)
+                .on("click", mouseclick);
+            
+        });
+
+        // Enable Graph Filtering
+        d3.selectAll("input[type=checkbox]").on("click", function() {
+            var tooltipMust = $('#enableTooltipMust:checked').val();
+            var tooltipShould = $('#enableTooltipShould:checked').val();
+            var tooltipMay = $('#enableTooltipMay:checked').val();
+            var nodesGroups = []
+            var hidden_nodes = []
+
+            if (tooltipMay !== undefined && tooltipMay !== null ){
+                nodesGroups.push("MAY")
+            }
+            if (tooltipShould !== undefined && tooltipShould !== null ){
+                nodesGroups.push("SHOULD")
+            }
+            if (tooltipMust !== undefined && tooltipMust !== null ){
+                nodesGroups.push("MUST")
+            }
+
+            // Hide/show filtered nodes
+            d3.selectAll('g.node')
+                .each(function(d) {
+                    var visibility = nodesGroups.includes(d.group) ? "visible" : "hidden";
+                    d3.select(this)
+                    .style("visibility", visibility)
+                    if (visibility == "hidden"){
+                        hidden_nodes.push(d.name)
+                    }
+                });
+            
+            // Hide/show links related to filtered nodes
+            d3.selectAll("path.link")
+            .each(function(l) {
+                d3.select(this).style("visibility", "visible")
+                if (hidden_nodes.includes(l.source.name) || hidden_nodes.includes(l.target.name)){
+                    d3.select(this).style("visibility", "hidden")
+                }
+            })
+        });
+
+
+        function mouseover(d) {
+            svg.selectAll("path.link.target-" + d.key)
+            .classed("target", true)
+            .each(updateNodes("source", true));
+
+            svg.selectAll("path.link.source-" + d.key)
+            .classed("source", true)
+            .each(updateNodes("target", true));
+
+            var tooltip = $('#enableTooltip:checked').val();
+            
+            d3.selectAll("#tooltip").remove();
+
+            if (tooltip !== undefined && tooltip !== null ){
+
+                d3.selectAll("#graph")
+                .append("div")
+                .attr("id", "tooltip")
+                .style("opacity", 0)
+                .html(d.title);
+                var mouseloc = d3.mouse(d3.select("#graph")[0][0]);
+                
+                my = (mouseloc[1] + document.getElementById("tooltip").offsetHeight) > h ? (h - document.getElementById("tooltip").offsetHeight  - 50) : (mouseloc[1] + 10),
+                mx = (mouseloc[0] + document.getElementById("tooltip").offsetWidth) > w ? (mouseloc[0] + 10) :  (w - 50 - document.getElementById("tooltip").offsetWidth);
+
+                d3.selectAll("#tooltip").style({"top" : my + "px", "left": mx + "px"});
+                d3.selectAll("#tooltip")
+                    .transition()
+                    .duration(500)
+                    .style("opacity", 1);
+            }
+            
+        }
+
+
+        function mouseout(d) {
+            svg.selectAll("path.link.source-" + d.key)
+                .classed("source", false)
+                .each(updateNodes("target", false));
+
+            svg.selectAll("path.link.target-" + d.key)
+                .classed("target", false)
+                .each(updateNodes("source", false));
+
+            d3.selectAll("#tooltip").remove();   
+        }
+
+        function updateNodes(name, value) {
+            return function(d) {
+                if (value) this.parentNode.appendChild(this);
+                svg.select("#node-" + d[name].key).classed(name, value);
+            };
+        }
+
+        
+
+        function findStartAngle(children) {
+            var min = children[0].x;
+            children.forEach(function(d) {
+            if (d.x < min)
+                min = d.x;
+            });
+            return min;
+        }
+
+        function findEndAngle(children) {
+            var max = children[0].x;
+            children.forEach(function(d) {
+            if (d.x > max)
+                max = d.x;
+            });
+            return max;
+        }
+
+        function link_color(kind) {
+            colors = {
+            "UPDATE": "green",
+            "OBSOLETE": "red"
+            }
+            return colors[kind]
+        }
+
+        // Show/hide summary if available
+        function mouseclick(d) {
+            if (d.summary !== undefined && d.summary !== null ){
+                if (d.summary != ""){
+                    title = d.key.replace(/_/g, ' ');
+                    $('#summary_title').html(title +" Summary")
+                    $('#summary_text').html(d.summary)
+                    $('#staticModal').modal('toggle')
+                }
+                
+            }
+        }
+
+        
+    </script>
+  </body>
+</html>
