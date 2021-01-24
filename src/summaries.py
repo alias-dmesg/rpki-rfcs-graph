@@ -19,10 +19,6 @@ class RFCsSummaries():
         else:
             self.summaries_filename = result_file
 
-# summaries_folder = 
-# summaries = {}
-# summaries_filename = "./summaries.json"
-
     def get(self):
         for root, _, files in os.walk(self.summaries_folder):
             for file in files:
