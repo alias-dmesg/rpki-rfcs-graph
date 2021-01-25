@@ -1,5 +1,5 @@
 # RPKI RFCs Graph
-Resource Public Key Infrastructure (RPKI) is the ways to cryptographically sign records that associate a Border Gateway Protocol (BGP) route announcement with the correct originating AS number. But if you are just getting started about RPKI or simply wish to read up on it, you will soon realize there is not one single authoritative Request for Comment (RFC)on the topic. In fact, there are more than 40 RFCs about RPKI found in different categories.
+Resource Public Key Infrastructure (RPKI) is the ways to cryptographically sign records that associate a Border Gateway Protocol (BGP) route announcement with the correct originating AS number. But if you are just getting started about RPKI or simply wish to read up on it, you will soon realize there is not one single authoritative Request for Comment (RFC)on the topic. In fact, there are more than 40 RFCs about RPKI found in different categories. ![RPKI RFCs list](rkip_rfcs_tweets.jpeg)
 
 ## Goals i.e. Which RPKI-related RFCs should you read ?
 What RFC should you read first? What can you learn from the various RFCs? Should you read all of them? To help you find useful information efficiently, we try to answer all these questions with a new tool: the RPKI RFCs Graph. This graph shows the dynamics of all the RPKI-related RFCs and gives you a brief of each. The RFCs are represented in an interactive graph where you can see their relationsto each other.
@@ -51,7 +51,7 @@ What RFC should you read first? What can you learn from the various RFCs? Should
 * `./html/`: html related files to draw the graph. This folder should be used as root on your web server to see the graph.
     * `data/rfcs_data.json`: main data source use by the javascripts in the index file to draw graph.
     * `figure`: contains images, pictures used in summaries. 
-* `rpki_rfcs_list.txt`: RPKI RFCs list as provided by Aftab
+* `rpki_rfcs_list.txt`: RPKI RFCs list as provided by [Aftab](https://twitter.com/aftabsiddiqui/status/1296103956242825216)
 * `src`: python scripts:
     * `graphData.py`: main script to generate graph data.
     * `groups.py`: create RFCs groups saved in file `./data/rfcs_groups.json`
@@ -63,7 +63,7 @@ What RFC should you read first? What can you learn from the various RFCs? Should
 Create new  or update RFC brief and save it in folder `./summaries` with the name `rfcID_summary.md` where `ID` is the RFC number. A call to the main python script `src/graphData.py` will update the briefs database. Please note that images or pictures path should be relative to `./html/figure` folder.
 ### Change category for an RFC
 For now, just update file `./data/rfcs_groups.json`
-### create graph
+### Create graph
 ```
 $ python3 src/graphData.py -r rpki_rfcs_list.txt
 #####= Getting RPKI RFCs list =#####
@@ -82,13 +82,13 @@ root /path/to/rpki-rfcs-graph/html;
 
 
 ## Team
-This work has been done as part of MANRS fellow research group activity. The team was composed of:
+This work has been done as part of MANRS fellow research group activity. The team was composed of (alphabetical order):
 
 * Alfred Arouna (fellow)
+* Aftab Siddiqui (program manager)
 * Augusto Mathurin (fellow)
 * Bahaa Al-Musawi (fellow)
 * Boris Mimeur (Ambassador)
-* Aftab Siddiqui (program manager)
 
 ## Credits
 RFCs metadata (tooltip in the graph) is adpapted from AndreaOlivieri'[rfc2json](https://github.com/AndreaOlivieri/rfc2json.git)
